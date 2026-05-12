@@ -179,3 +179,7 @@ coverage/
 
 # Specific folders
 dry-run/
+
+# Rust specific
+target/ 
+Cargo.lock
