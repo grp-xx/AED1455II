@@ -24,6 +24,8 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
+    println!("Default Device: {}", pcap::Device::lookup().unwrap().unwrap().name);
+
     match (cli.interface, cli.file) {
         (Some(interface), None) => {
             verbose_log(cli.verbose, 2, &format!("Using interface: {interface}")[..]);
@@ -35,10 +37,20 @@ fn main() {
                                                             .timeout(1000)
                                                             .open()
                                                             .unwrap();
-            while let Ok(packet) = cap.next_packet() {
-                let s = format!("Received packet! {:?}", packet);
-                verbose_log(cli.verbose, 2, &s);
-            }
+//            while let Ok(packet) = cap.next_packet() {
+//                let s = format!("Received frame with EtherType! {:?}", &packet.data[12..14]);
+//                verbose_log(cli.verbose, 2, &s);
+//            }
+            cap.filter("ip", true).unwrap();
+//            let handler = |packet: pcap::Packet<'_>| { 
+//                let s = format!("Received frame with EtherType! {:?}", &packet.data[12..14]);
+//                verbose_log(cli.verbose, 2, &s);
+//            };
+
+            cap.for_each(Some(10), handler).unwrap();
+            println!("Packet RX: {}", cap.stats().unwrap().received);
+            println!("Packet dropped: {}", cap.stats().unwrap().dropped);
+            println!("Packet dropped by interface: {}", cap.stats().unwrap().if_dropped);
         }
         (None, Some(file)) => {
             verbose_log(cli.verbose, 2, &format!("Using file: {}", file.display()));
@@ -53,4 +65,9 @@ fn verbose_log(verbose: u8, verbose_level: u8, message: &str) {
     if verbose >= verbose_level {
         println!("[VERBOSE] {}", message);
     }
+}
+
+fn handler(packet: pcap::Packet<'_>) {
+    let s = format!("Received frame with EtherType! {:?}", &packet.data[12..14]);
+    println!("{}", s);
 }
