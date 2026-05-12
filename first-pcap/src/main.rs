@@ -28,7 +28,13 @@ fn main() {
         (Some(interface), None) => {
             verbose_log(cli.verbose, 2, &format!("Using interface: {interface}")[..]);
             
-            let mut cap = pcap::Capture::from_device(&interface[..]).unwrap().open().unwrap();
+            let mut cap = pcap::Capture::from_device(&interface[..])
+                                                            .unwrap()
+                                                            .promisc(true)
+                                                            .immediate_mode(true)
+                                                            .timeout(1000)
+                                                            .open()
+                                                            .unwrap();
             while let Ok(packet) = cap.next_packet() {
                 let s = format!("Received packet! {:?}", packet);
                 verbose_log(cli.verbose, 2, &s);
