@@ -183,3 +183,4 @@ dry-run/
 # Rust specific
 target/ 
 Cargo.lock
+Traces/nettare*

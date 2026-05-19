@@ -24,8 +24,6 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
-    println!("Default Device: {}", pcap::Device::lookup().unwrap().unwrap().name);
-
     match (cli.interface, cli.file) {
         (Some(interface), None) => {
             verbose_log(cli.verbose, 2, &format!("Using interface: {interface}")[..]);
@@ -41,21 +39,23 @@ fn main() {
 //                let s = format!("Received frame with EtherType! {:?}", &packet.data[12..14]);
 //                verbose_log(cli.verbose, 2, &s);
 //            }
-            cap.filter("ip", true).unwrap();
+//            cap.filter("ip", true).unwrap();
 //            let handler = |packet: pcap::Packet<'_>| { 
 //                let s = format!("Received frame with EtherType! {:?}", &packet.data[12..14]);
 //                verbose_log(cli.verbose, 2, &s);
 //            };
 
-            cap.for_each(Some(10), handler).unwrap();
+            cap.for_each(Some(10000), handler).unwrap();
             println!("Packet RX: {}", cap.stats().unwrap().received);
             println!("Packet dropped: {}", cap.stats().unwrap().dropped);
             println!("Packet dropped by interface: {}", cap.stats().unwrap().if_dropped);
         }
         (None, Some(file)) => {
             verbose_log(cli.verbose, 2, &format!("Using file: {}", file.display()));
+            let mut cap = pcap::Capture::from_file(file).unwrap();
+            cap.for_each(Some(10000), handler).unwrap();
         }
-        _ => unreachable!("clap enforces exactly one input source"),
+        _ => unreachable!("clap enforces exactly one input source")
     }
 
 
@@ -68,6 +68,11 @@ fn verbose_log(verbose: u8, verbose_level: u8, message: &str) {
 }
 
 fn handler(packet: pcap::Packet<'_>) {
-    let s = format!("Received frame with EtherType! {:?}", &packet.data[12..14]);
-    println!("{}", s);
+    let s = format!("Received frame with EtherType! {:0x?}", &packet.data[12..14]);
+    verbose_log(2, 2, &s);
+    let spkt = etherparse::SlicedPacket::from_ethernet(packet.data);
+    println!("Link layer: {:?}", spkt.as_ref().unwrap().link);
+    println!("Link Exts layer: {:?}", spkt.as_ref().unwrap().link_exts);
+    println!("Network layer: {:?}", spkt.as_ref().unwrap().net);
+    println!("Transport layer: {:?}", spkt.as_ref().unwrap().transport);
 }
